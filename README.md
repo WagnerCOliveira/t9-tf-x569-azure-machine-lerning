@@ -86,16 +86,19 @@ projeto/
 
 O notebook está organizado nas seguintes seções:
 
-| # | Seção | Descrição |
-|---|---|---|
-| 1 | Importações | Todas as bibliotecas centralizadas |
-| 2 | Carregamento | Azure Blob Storage com fallback local |
-| 3 | EDA | Nulos, describe, histogramas, boxplots, heatmap de correlação |
-| 4 | Pré-processamento | Feature engineering, StandardScaler, split estratificado |
-| 5 | Treinamento | GridSearchCV para Random Forest e XGBoost |
-| 6 | Avaliação | Cross-validation, matrizes de confusão, curvas ROC, feature importance |
-| 7 | MLflow | Registro de ambos os modelos com métricas e hiperparâmetros |
-| 8 | Conclusão | Tabela comparativa final |
+| Seção | Descrição |
+|---|---|
+| Verificação do SDK | `pip show azure-ai-ml` e `pip show mlflow` |
+| Conexão ao Workspace | `DefaultAzureCredential` + `MLClient.from_config()` |
+| Importações | Todas as bibliotecas centralizadas |
+| Preparação dos Dados | Azure Blob Storage com fallback local |
+| EDA | Nulos, describe, histogramas, boxplots, heatmap de correlação |
+| Pré-processamento | Feature engineering, StandardScaler, split estratificado |
+| Experimento MLflow | `mlflow.set_experiment()` |
+| Treinamento — Random Forest | GridSearchCV + MLflow run com **autolog** + artefato ROC |
+| Treinamento — XGBoost | GridSearchCV + MLflow run com **logging manual** + artefato ROC |
+| Avaliação | Cross-validation, matrizes de confusão, curvas ROC, feature importance |
+| Conclusão | Tabela comparativa final |
 
 ---
 
@@ -172,7 +175,7 @@ az storage blob upload \
 pip install -r requirements-azure.txt
 ```
 
-5. Selecione o kernel **Python 3.10** e execute **Run All**
+5. Selecione o kernel **Python 3.8 - AzureML** e execute **Run All**
 
 O notebook carregará o dataset automaticamente via:
 
@@ -199,8 +202,8 @@ Após a execução completa, os seguintes artefatos são gerados:
 
 **No Azure ML (MLflow):**
 - Experimento `heart-disease-experiment` com duas runs registradas
-- Cada run contém: hiperparâmetros, accuracy, F1-Score, AUC-ROC, métricas de CV e artefato do modelo
-- Tag `best_model=True` marcada na run com maior AUC-ROC
+- Cada run contém: hiperparâmetros, accuracy, F1-Score, AUC-ROC, métricas de CV e curva ROC como artefato
+- Run do Random Forest usa autolog; run do XGBoost usa logging manual
 
 Para visualizar os resultados:
 1. Acesse [ml.azure.com](https://ml.azure.com) → **Jobs** (ou **Experiments**)
@@ -226,17 +229,21 @@ bash scripts/end-environment.sh
 **Para execução no Azure ML** (`requirements-azure.txt`):
 
 ```
-azure-ai-ml
+azure-ai-ml==1.27.1
 azure-identity
-mlflow
-azureml-mlflow
+mlflow==2.22.0
+azureml-core==1.51.0
+azureml-defaults==1.51.0
+azureml-mlflow==1.51.0
+azureml-telemetry==1.51.0
+scikit-learn==1.5.1
 pandas==2.0.3
-numpy==1.24.3
-scikit-learn==1.3.0
 xgboost==1.7.6
 matplotlib==3.7.2
 seaborn==0.12.2
 ```
+
+> `numpy` não é listado pois já vem pré-instalado na Compute Instance do Azure ML.
 
 **Para execução local** (`requirements-local.txt`):
 
