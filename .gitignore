@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# Credenciais e configurações locais (NUNCA commitar)
+.env
+.env.local
+*.env
+config.json
+credentials.json
+service_principal.json
+.azureml/
+
+# Modelos treinados (podem ser grandes)
+models/
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
+
+# Outputs e artefatos gerados
+outputs/
+mlruns/
+mlartifacts/
+*.png
+!docs/*.png
+
+# Dados sensíveis (manter apenas os datasets públicos versionados)
+data/processed/
+data/interim/
+data/external/
+
+# Logs
+logs/
+*.log
+*.out
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Azure ML
+.azureml/
+azureml-setup/
+azureml_runs/
+
+# Cobertura de testes
+.coverage
+htmlcov/
+.pytest_cache/

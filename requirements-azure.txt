@@ -1,16 +1,35 @@
-azure-ai-ml==1.27.1
-azure-identity
-mlflow==2.22.0
-azureml-core==1.51.0
-azureml-defaults==1.51.0
-azureml-mlflow==1.51.0
-azureml-telemetry==1.51.0
-scikit-learn==1.5.1
-pandas==2.0.3
-xgboost==1.7.6
-lightgbm>=4.0.0
-optuna>=3.0.0
-shap>=0.44.0
-matplotlib==3.7.2
-seaborn==0.12.2
-joblib
+# =============================================================================
+# Dependências para execução no Azure Machine Learning
+# Ambiente: Compute Instance (Ubuntu 20.04, Python 3.10)
+# Nota: numpy vem pré-instalado na imagem base da Compute Instance do Azure ML
+# =============================================================================
+
+# --- Azure ML SDK ---
+azure-ai-ml==1.27.1         # SDK principal do Azure Machine Learning (v2)
+azure-identity              # Autenticação: DefaultAzureCredential, ManagedIdentity
+
+# --- Rastreamento de Experimentos ---
+mlflow==2.22.0              # Tracking de métricas, params e artefatos
+azureml-mlflow==1.51.0      # Integração MLflow ↔ Azure ML Workspace
+
+# --- Azure ML Core (compatibilidade com SDK v1) ---
+azureml-core==1.51.0        # Classes base: Workspace, Dataset, Experiment
+azureml-defaults==1.51.0    # Configurações padrão do ambiente AML
+azureml-telemetry==1.51.0   # Telemetria e diagnósticos do ambiente
+
+# --- Machine Learning ---
+scikit-learn==1.5.1         # KNN Imputer, GridSearchCV, métricas, VotingClassifier
+xgboost==1.7.6              # XGBoost Classifier com suporte a MLflow
+lightgbm>=4.0.0             # LightGBM Classifier (leaf-wise boosting)
+optuna>=3.0.0               # Otimização bayesiana de hiperparâmetros (TPE)
+
+# --- Interpretabilidade ---
+shap>=0.44.0                # SHAP values: beeswarm, waterfall, bar plots
+
+# --- Processamento de Dados ---
+pandas==2.0.3               # Manipulação de DataFrames
+joblib                      # Serialização de modelos e paralelismo no GridSearchCV
+
+# --- Visualização ---
+matplotlib==3.7.2           # Gráficos base (curvas ROC, matrizes de confusão)
+seaborn==0.12.2             # Heatmaps, distribuições, paletas estatísticas

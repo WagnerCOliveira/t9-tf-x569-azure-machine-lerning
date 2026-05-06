@@ -1,182 +1,185 @@
-# Previsão de Doenças Cardíacas com Azure Machine Learning
+# 🫀 Heart Disease Prediction — Azure Machine Learning
 
-Trabalho final da disciplina de Microsoft Azure Machine Learning — Universidade de Fortaleza (UNIFOR).
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Azure ML](https://img.shields.io/badge/Azure-Machine%20Learning-0078D4.svg)](https://azure.microsoft.com/services/machine-learning/)
+[![MLflow](https://img.shields.io/badge/MLflow-2.22-blue.svg)](https://mlflow.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/status-concluído-brightgreen.svg)]()
 
-Experimento completo de Machine Learning na nuvem utilizando Azure ML, com carregamento de dados via Blob Storage, análise exploratória, feature engineering, treinamento de dois algoritmos com otimização de hiperparâmetros, validação cruzada e registro dos modelos via MLflow.
+> Projeto de Machine Learning para previsão de doenças cardíacas desenvolvido como trabalho final da disciplina de **Microsoft Azure Machine Learning** na Universidade de Fortaleza (UNIFOR). Combina quatro algoritmos de classificação, otimização bayesiana de hiperparâmetros, análise de interpretabilidade SHAP e registro de modelos via MLflow na nuvem Azure.
 
 ---
+
+## 📋 Índice
+
+- [Sobre o Projeto](#-sobre-o-projeto)
+- [Características](#-características)
+- [Arquitetura](#-arquitetura)
+- [Datasets](#-datasets)
+- [Instalação](#-instalação)
+- [Uso](#-uso)
+- [Notebooks](#-notebooks)
+- [Resultados](#-resultados)
+- [Estrutura do Projeto](#-estrutura-do-projeto)
+- [Tecnologias](#-tecnologias)
+- [Documentação](#-documentação)
+- [Contribuição](#-contribuição)
+- [Licença](#-licença)
+- [Autores](#-autores)
+
+---
+
+## 🎯 Sobre o Projeto
+
+Doenças cardiovasculares são a principal causa de morte no mundo, responsáveis por cerca de 17,9 milhões de vidas por ano (OMS). A detecção precoce é crucial para reduzir mortalidade e melhorar a qualidade de vida dos pacientes.
+
+Este projeto implementa um pipeline completo de Machine Learning — desde a ingestão de dados até o registro de modelos em produção — utilizando a plataforma **Azure Machine Learning**. O objetivo é classificar pacientes como portadores ou não de doença cardíaca com base em 13 atributos clínicos, atingindo AUC-ROC ≥ 0.85.
+
+**Problema:** Classificação binária (`target = 1` → doença cardíaca presente, `target = 0` → ausente).
+
+**Contexto de aplicação:** Suporte à decisão clínica em triagem hospitalar.
+
+---
+
+## ✨ Características
+
+### Modelos Implementados
+
+| Modelo | Tipo | Papel |
+|--------|------|-------|
+| Logistic Regression | Linear | Baseline interpretável |
+| LightGBM | Gradient Boosting | Alta performance, baixo custo |
+| XGBoost | Gradient Boosting | Melhor AUC sem tuning |
+| Voting Ensemble (Soft) | Ensemble | Combinação dos 3 modelos acima |
+
+### Funcionalidades Principais
+
+- **Pipeline end-to-end** no Azure ML com fallback local automático
+- **Otimização bayesiana** de hiperparâmetros via Optuna (50 trials, TPE sampler)
+- **Interpretabilidade** com SHAP (beeswarm, bar plot, waterfall por predição)
+- **Rastreamento de experimentos** com MLflow (autolog + logging manual)
+- **Feature engineering** com 5 novas variáveis derivadas
+- **Imputação ML-based** para valores ausentes no dataset UCI
+- **Registro e versionamento** de modelos no Azure ML Model Registry
+
+### Métricas de Performance (dataset UCI, 920 registros)
+
+| Modelo | AUC-ROC | F1-Score |
+|--------|---------|---------|
+| LightGBM + Optuna | ~0.91 | ~0.88 |
+| XGBoost | ~0.90 | ~0.87 |
+| Voting Ensemble | ~0.90 | ~0.87 |
+| LightGBM (Grid) | ~0.89 | ~0.86 |
+| Logistic Regression | ~0.88 | ~0.85 |
+
+> Critério de sucesso: AUC-ROC ≥ 0.85 — **todos os modelos superam o critério**.
+
+---
+
+## 🏗️ Arquitetura
 
 ![Arquitetura Azure ML](docs/arquitetura_azure.png)
 
----
+O projeto utiliza os seguintes componentes do Azure Machine Learning:
 
-## Sumário
+| Componente | Nome | Finalidade |
+|------------|------|-----------|
+| Resource Group | `rg-projeto-final-ml` | Agrupamento lógico dos recursos |
+| AML Workspace | `mlw-projeto-final` | Hub central do experimento |
+| Compute Instance | `ci-notebooks-trabalho` | VM para execução dos notebooks |
+| Compute Cluster | `cluster-treino-trabalho` | Cluster para treinos distribuídos (0–2 nós) |
+| Blob Storage | `workspaceblobstore` | Armazenamento dos datasets |
+| Experiment | `heart-disease-experiment` | Rastreamento de runs e métricas |
+| Model Registry | Azure ML Models | Versionamento de modelos treinados |
 
-- [Visão Geral](#visão-geral)
-- [Dataset](#dataset)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [Pipeline do Experimento](#pipeline-do-experimento)
-- [Pré-requisitos](#pré-requisitos)
-- [Configuração do Ambiente Azure](#configuração-do-ambiente-azure)
-- [Upload do Dataset](#upload-do-dataset)
-- [Execução do Notebook](#execução-do-notebook)
-- [Resultados Esperados](#resultados-esperados)
-- [Limpeza do Ambiente](#limpeza-do-ambiente)
-- [Dependências](#dependências)
+Para detalhes completos, consulte [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
-## Visão Geral
+## 📊 Datasets
 
-O objetivo é prever se um paciente possui doença cardíaca (`target = 1`) ou não (`target = 0`) com base em atributos clínicos. O experimento cobre todo o ciclo de vida de um modelo de ML na Azure:
+### heart.csv
 
-1. **Carregamento** do dataset via Azure Blob Storage
-2. **EDA** com estatísticas descritivas e visualizações
-3. **Feature Engineering** e normalização
-4. **Treinamento** de Random Forest e XGBoost com GridSearchCV
-5. **Validação** com cross-validation estratificado (AUC e F1-Score)
-6. **Registro** de ambos os modelos no Azure ML via MLflow
+- **Fonte:** [Heart Disease Dataset — Kaggle](https://www.kaggle.com/datasets/johnsmith88/heart-disease-dataset) (baseado no UCI Cleveland)
+- **Registros:** 1.025 | **Features:** 13 | **Target:** `target` (0/1)
+- **Distribuição:** ~51% positivos (doença presente) / ~49% negativos
+- **Uso:** Notebook de referência (`trabalho_final_ml.ipynb`)
 
----
+### heart_disease_uci.csv
 
-## Dataset
+- **Fonte:** [UCI Machine Learning Repository — Heart Disease](https://archive.ics.uci.edu/dataset/45/heart+disease)
+- **Registros:** 920 | **Features:** 13 + `num` (0–4) | **Centros:** Cleveland, Hungary, Switzerland, VA Long Beach
+- **Distribuição:** ~45% negativos (num=0) / ~55% positivos (num≥1, binarizado)
+- **Uso:** Notebook avançado (`treinamento_modelos_ml.ipynb`)
 
-**Heart Disease UCI** — 1.025 registros, 13 features e 1 variável-alvo.
-
-| Coluna | Descrição | Tipo |
-|---|---|---|
-| `age` | Idade do paciente | Numérico |
-| `sex` | Sexo (1 = masculino, 0 = feminino) | Categórico |
-| `cp` | Tipo de dor no peito (0–3) | Categórico |
-| `trestbps` | Pressão arterial em repouso (mmHg) | Numérico |
-| `chol` | Colesterol sérico (mg/dl) | Numérico |
-| `fbs` | Glicemia em jejum > 120 mg/dl (1 = sim) | Categórico |
-| `restecg` | Resultado do eletrocardiograma em repouso | Categórico |
-| `thalach` | Frequência cardíaca máxima atingida | Numérico |
-| `exang` | Angina induzida por exercício (1 = sim) | Categórico |
-| `oldpeak` | Depressão do ST induzida por exercício | Numérico |
-| `slope` | Inclinação do segmento ST | Categórico |
-| `ca` | Número de vasos principais coloridos (0–3) | Numérico |
-| `thal` | Tipo de talassemia | Categórico |
-| `target` | **Variável-alvo** (1 = doente, 0 = saudável) | Binário |
+Para o dicionário completo de dados, consulte [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
 
 ---
 
-## Estrutura do Projeto
+## 🚀 Instalação
 
-```
-projeto/
-├── data/
-│   ├── heart.csv                        # Dataset simplificado (fallback)
-│   └── heart_disease_uci.csv            # Dataset UCI completo (920 registros, 4 centros)
-├── notebooks/
-│   ├── trabalho_final_ml.ipynb          # Notebook de referência (RF + XGBoost)
-│   ├── data processed.ipynb             # EDA e pré-processamento do dataset UCI
-│   └── treinamento_modelos_ml.ipynb     # Notebook completo (4 modelos + SHAP + Optuna)
-├── models/                              # Modelos treinados (gerado em execução)
-├── scripts/
-│   ├── start-environment.sh             # Cria todos os recursos Azure
-│   └── end-environment.sh               # Remove todos os recursos Azure
-├── requirements-azure.txt               # Dependências para rodar no AML
-├── requirements-local.txt               # Dependências para rodar localmente
-└── README.md
-```
+### Pré-requisitos
 
----
-
-## Pipeline do Experimento
-
-![Pipeline ML](docs/pipeline_ml.png)
-
-### Notebook de Referência (`trabalho_final_ml.ipynb`)
-
-| Seção | Descrição |
-|---|---|
-| Verificação do SDK | `pip show azure-ai-ml` e `pip show mlflow` |
-| Conexão ao Workspace | `DefaultAzureCredential` + `MLClient.from_config()` |
-| Importações | Todas as bibliotecas centralizadas |
-| Preparação dos Dados | Azure Blob Storage com fallback local |
-| EDA | Nulos, describe, histogramas, boxplots, heatmap de correlação |
-| Pré-processamento | Feature engineering, StandardScaler, split estratificado |
-| Experimento MLflow | `mlflow.set_experiment()` |
-| Treinamento — Random Forest | GridSearchCV + MLflow run com **autolog** + artefato ROC |
-| Treinamento — XGBoost | GridSearchCV + MLflow run com **logging manual** + artefato ROC |
-| Avaliação | Cross-validation, matrizes de confusão, curvas ROC, feature importance |
-| Conclusão | Tabela comparativa final |
-
-### Notebook Completo (`treinamento_modelos_ml.ipynb`)
-
-Notebook avançado com dataset UCI completo (920 registros), 4 algoritmos e análise de interpretabilidade.
-
-| Seção | Descrição |
-|---|---|
-| 0 — Verificação | Checagem de todas as dependências |
-| 1 — Azure ML | Conexão com fallback transparente para MLflow local |
-| 2 — Importações | Todas as bibliotecas centralizadas |
-| 3 — EDA + Revisão Crítica | Análise do `data processed.ipynb` + análises complementares |
-| 4 — Pré-processamento | Imputação ML-based + feature engineering (5 novas features) + StandardScaler |
-| 5 — MLflow | Configuração do experimento + funções de logging |
-| 6 — Logistic Regression | Baseline com regularização L1/L2/ElasticNet + coeficientes |
-| 7 — LightGBM | GridSearchCV + comparação com XGBoost |
-| 8 — XGBoost | GridSearchCV + logging manual de artefatos |
-| 9 — Voting Ensemble | Soft voting (LR + LightGBM + XGBoost) + hard voting |
-| 10 — Optuna | Otimização bayesiana (50 trials, TPE) do LightGBM |
-| 11 — Comparação | Tabela completa, curvas ROC sobrepostas, análise de FN |
-| 12 — SHAP | Beeswarm, bar plot, waterfall (True Positive e Falso Negativo) |
-| 13 — Registro | Seleção do melhor modelo + Azure ML Model Registry |
-| 14 — Relatório | Resumo executivo + próximos passos |
-
----
-
-## Pré-requisitos
-
+- Python 3.10+
 - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) instalado
 - Conta Azure com créditos disponíveis (estudante ou pay-as-you-go)
-- Python 3.10+
+- Git
 
-Faça login na Azure antes de executar os scripts:
+### 1. Clonar o Repositório
 
+```bash
+git clone <url-do-repositorio>
+cd projeto
+```
+
+### 2. Instalar Dependências
+
+**Ambiente local:**
+```bash
+pip install -r requirements-local.txt
+```
+
+**Ambiente Azure ML:**
+```bash
+pip install -r requirements-azure.txt
+```
+
+### 3. Configurar o Ambiente Azure
+
+Faça login na Azure:
 ```bash
 az login
 ```
 
----
-
-## Configuração do Ambiente Azure
-
-O script `start-environment.sh` cria automaticamente todos os recursos necessários:
-
-| Recurso | Nome | Descrição |
-|---|---|---|
-| Resource Group | `rg-projeto-final-ml` | Agrupa todos os recursos |
-| AML Workspace | `mlw-projeto-final` | Workspace central do experimento |
-| Compute Instance | `ci-notebooks-trabalho` | VM para rodar o notebook (STANDARD_DS11_V2) |
-| Compute Cluster | `cluster-treino-trabalho` | Cluster para treinos pesados (0–2 nós) |
-
-Execute na raiz do projeto:
-
+Execute o script de inicialização (cria todos os recursos necessários):
 ```bash
 bash scripts/start-environment.sh
 ```
 
 > O processo leva entre 5 e 10 minutos. O cluster é configurado com `min-instances=0` para não consumir créditos quando ocioso.
 
-Ao final, acesse o workspace em: **https://ml.azure.com**
+Para guia detalhado de configuração, consulte [docs/SETUP.md](docs/SETUP.md).
 
 ---
 
-## Upload do Dataset
+## 📖 Uso
 
-Após o ambiente estar criado, faça o upload do `heart.csv` para o Blob Storage padrão do Workspace:
+### Fluxo de Execução Recomendado
 
-**Opção 1 — Portal Web (recomendado para iniciantes)**
+1. **Configurar ambiente** — execute `bash scripts/start-environment.sh`
+2. **Upload do dataset** — faça upload de `data/heart.csv` para o `workspaceblobstore`
+3. **Explorar os dados** — abra `notebooks/data processed.ipynb`
+4. **Treinar os modelos** — abra `notebooks/treinamento_modelos_ml.ipynb` e execute todas as células
+5. **Comparar resultados** — acesse o experimento no portal ml.azure.com
+6. **Limpar recursos** — execute `bash scripts/end-environment.sh`
 
-1. Acesse [ml.azure.com](https://ml.azure.com) e selecione o workspace `mlw-projeto-final`
-2. Menu lateral → **Data** → **Datastores**
-3. Clique em `workspaceblobstore` → **Browse**
-4. Faça upload do arquivo `data/heart.csv`
+### Upload do Dataset (Opção Portal Web)
 
-**Opção 2 — Azure CLI**
+1. Acesse [ml.azure.com](https://ml.azure.com) e selecione `mlw-projeto-final`
+2. Menu lateral → **Data** → **Datastores** → `workspaceblobstore` → **Browse**
+3. Faça upload de `data/heart.csv`
+
+### Upload do Dataset (Azure CLI)
 
 ```bash
 az storage blob upload \
@@ -186,115 +189,182 @@ az storage blob upload \
   --file data/heart.csv
 ```
 
-> O nome da storage account e o ID do container aparecem nos detalhes do `workspaceblobstore` no portal.
-
----
-
-## Execução do Notebook
+### Execução no Azure ML
 
 1. Acesse [ml.azure.com](https://ml.azure.com) → **Notebooks**
-2. Clique em **Upload files** e selecione `notebooks/trabalho_final_ml.ipynb`
+2. Clique em **Upload files** e selecione o notebook desejado
 3. Selecione a Compute Instance `ci-notebooks-trabalho`
-4. Abra um terminal na Compute Instance e instale as dependências:
+4. Abra terminal na Compute Instance e instale dependências:
+   ```bash
+   pip install -r requirements-azure.txt
+   ```
+5. Selecione kernel **Python 3.10** e execute **Run All**
 
-```bash
-pip install -r requirements-azure.txt
-```
-
-5. Selecione o kernel **Python 3.8 - AzureML** e execute **Run All**
-
-O notebook carregará o dataset automaticamente via:
-
-```python
-path = "azureml://datastores/workspaceblobstore/paths/heart.csv"
-```
-
-Se executado localmente (fora do Azure), o fallback carrega `data/heart.csv` automaticamente.
-
----
-
-## Resultados Esperados
-
-Após a execução completa, os seguintes artefatos são gerados:
-
-**Métricas no conjunto de teste — notebook de referência (valores de referência):**
-
-| Modelo | Accuracy | F1-Score | AUC-ROC |
-|---|---|---|---|
-| Random Forest | ~0.85 | ~0.86 | ~0.92 |
-| XGBoost | ~0.86 | ~0.87 | ~0.93 |
-
-**Métricas no conjunto de teste — notebook completo (dataset UCI, valores de referência):**
-
-| Modelo | AUC-ROC | F1-Score | Observação |
-|---|---|---|---|
-| Logistic Regression | ~0.88 | ~0.85 | Baseline interpretável |
-| LightGBM (Grid) | ~0.89 | ~0.86 | Melhor velocidade |
-| XGBoost | ~0.90 | ~0.87 | Melhor AUC sem tuning |
-| Voting Ensemble | ~0.90 | ~0.87 | Combina os 3 modelos |
-| LightGBM (Optuna) | ~0.91 | ~0.88 | Melhor resultado global |
-
-> Critério de sucesso: AUC-ROC ≥ 0.85 — **todos os modelos superam o critério**.
-
-**No Azure ML (MLflow):**
-- Experimento `heart-disease-experiment` com duas runs registradas
-- Cada run contém: hiperparâmetros, accuracy, F1-Score, AUC-ROC, métricas de CV e curva ROC como artefato
-- Run do Random Forest usa autolog; run do XGBoost usa logging manual
-
-Para visualizar os resultados:
-1. Acesse [ml.azure.com](https://ml.azure.com) → **Jobs** (ou **Experiments**)
-2. Selecione `heart-disease-experiment`
-3. Compare as duas runs lado a lado pelas métricas registradas
-
----
-
-## Limpeza do Ambiente
-
-Para evitar cobranças após o trabalho, remova todos os recursos:
+### Limpeza do Ambiente
 
 ```bash
 bash scripts/end-environment.sh
 ```
 
-> Este comando deleta o Resource Group `rg-projeto-final-ml` e **todos** os recursos dentro dele (Workspace, Compute, dados no Blob). A operação é irreversível.
+> **Atenção:** Este comando deleta o Resource Group e **todos** os recursos dentro dele. A operação é irreversível.
 
 ---
 
-## Dependências
+## 📓 Notebooks
 
-**Para execução no Azure ML** (`requirements-azure.txt`):
+### `data processed.ipynb` — Exploração e Pré-processamento
+
+Análise exploratória do dataset UCI completo com:
+- Estatísticas descritivas e distribuição das variáveis
+- Análise de valores ausentes e estratégia de imputação
+- Visualizações: histogramas, boxplots, heatmap de correlação
+- Encoding de variáveis categóricas
+- Preparação do dataset para treinamento
+
+### `trabalho_final_ml.ipynb` — Notebook de Referência
+
+Pipeline completo com Random Forest e XGBoost:
+- Conexão ao Azure ML Workspace via `DefaultAzureCredential`
+- Carregamento do dataset via Blob Storage com fallback local
+- Treinamento com GridSearchCV e validação cruzada estratificada
+- Logging via MLflow (autolog no RF, manual no XGBoost)
+- Comparação final com curvas ROC e matrizes de confusão
+
+### `treinamento_modelos_ml.ipynb` — Notebook Avançado (Principal)
+
+Pipeline completo de nível produção com 4 algoritmos:
+- Dataset UCI (920 registros, 4 centros clínicos)
+- Feature engineering com 5 variáveis derivadas
+- Otimização bayesiana com Optuna (50 trials)
+- Análise SHAP para interpretabilidade
+- Registro do melhor modelo no Azure ML Model Registry
+
+Para documentação detalhada de cada notebook, consulte [docs/PIPELINE.md](docs/PIPELINE.md).
+
+---
+
+## 📈 Resultados
+
+### Notebook de Referência (heart.csv — 1.025 registros)
+
+| Modelo | Accuracy | F1-Score | AUC-ROC |
+|--------|----------|---------|---------|
+| Random Forest | ~0.85 | ~0.86 | ~0.92 |
+| XGBoost | ~0.86 | ~0.87 | ~0.93 |
+
+### Notebook Avançado (UCI — 920 registros)
+
+| Modelo | AUC-ROC | F1-Score | Observação |
+|--------|---------|---------|------------|
+| LightGBM + Optuna | ~0.91 | ~0.88 | **Melhor resultado** |
+| XGBoost | ~0.90 | ~0.87 | Melhor sem tuning |
+| Voting Ensemble | ~0.90 | ~0.87 | Robustez combinada |
+| LightGBM (Grid) | ~0.89 | ~0.86 | Alta velocidade |
+| Logistic Regression | ~0.88 | ~0.85 | Baseline interpretável |
+
+### Principais Insights (SHAP)
+
+- `thal` (tipo de talassemia) e `cp` (tipo de dor no peito) são os preditores mais relevantes
+- `ca` (vasos principais coloridos) tem forte correlação negativa com a presença de doença
+- `thalach` (frequência cardíaca máxima) apresenta relação positiva com saúde cardíaca
+- Falsos negativos concentram-se em pacientes com `thal=reversable defect` e `cp=asymptomatic`
+
+Para análise completa, consulte [docs/MODELS.md](docs/MODELS.md).
+
+---
+
+## 📁 Estrutura do Projeto
 
 ```
-azure-ai-ml==1.27.1
-azure-identity
-mlflow==2.22.0
-azureml-core==1.51.0
-azureml-defaults==1.51.0
-azureml-mlflow==1.51.0
-azureml-telemetry==1.51.0
-scikit-learn==1.5.1
-pandas==2.0.3
-xgboost==1.7.6
-lightgbm>=4.0.0
-optuna>=3.0.0
-shap>=0.44.0
-matplotlib==3.7.2
-seaborn==0.12.2
-joblib
-```
-
-> `numpy` não é listado pois já vem pré-instalado na Compute Instance do Azure ML.
-
-**Para execução local** (`requirements-local.txt`):
-
-```bash
-pip install -r requirements-local.txt
+projeto/
+├── data/
+│   ├── heart.csv                        # Dataset simplificado (1.025 registros)
+│   └── heart_disease_uci.csv            # Dataset UCI completo (920 registros, 4 centros)
+├── docs/
+│   ├── arquitetura_azure.png            # Diagrama da arquitetura no Azure
+│   ├── pipeline_ml.png                  # Diagrama do pipeline de ML
+│   ├── ARCHITECTURE.md                  # Documentação detalhada da arquitetura
+│   ├── DATA_DICTIONARY.md               # Dicionário de dados dos datasets
+│   ├── MODELS.md                        # Documentação técnica dos modelos
+│   ├── PIPELINE.md                      # Documentação do pipeline de ML
+│   ├── SETUP.md                         # Guia detalhado de configuração
+│   └── CHANGELOG.md                     # Histórico de versões
+├── notebooks/
+│   ├── data processed.ipynb             # EDA e pré-processamento
+│   ├── trabalho_final_ml.ipynb          # Notebook de referência (RF + XGBoost)
+│   └── treinamento_modelos_ml.ipynb     # Notebook avançado (4 modelos + SHAP + Optuna)
+├── scripts/
+│   ├── start-environment.sh             # Cria todos os recursos Azure
+│   └── end-environment.sh               # Remove todos os recursos Azure
+├── CONTRIBUTING.md                      # Guia de contribuição
+├── LICENSE                              # Licença MIT
+├── README.md                            # Este arquivo
+├── requirements-azure.txt               # Dependências para Azure ML
+└── requirements-local.txt               # Dependências para execução local
 ```
 
 ---
 
-## Informações Acadêmicas
+## 🛠️ Tecnologias
 
-- **Disciplina:** Microsoft Azure Machine Learning
-- **Instituição:** Universidade de Fortaleza — UNIFOR
-- **Dataset:** [Heart Disease UCI — Kaggle](https://www.kaggle.com/datasets/johnsmith88/heart-disease-dataset)
+| Categoria | Tecnologia | Versão |
+|-----------|-----------|--------|
+| Plataforma Cloud | Azure Machine Learning | 1.27.x |
+| Rastreamento | MLflow | 2.22.0 |
+| ML — Boosting | XGBoost | 1.7.6 |
+| ML — Boosting | LightGBM | ≥ 4.0.0 |
+| ML — Framework | scikit-learn | 1.5.1 |
+| Otimização | Optuna | ≥ 3.0.0 |
+| Interpretabilidade | SHAP | ≥ 0.44.0 |
+| Dados | pandas | 2.0.3 |
+| Dados | numpy | (pré-instalado no AML) |
+| Visualização | matplotlib | 3.7.2 |
+| Visualização | seaborn | 0.12.2 |
+| Linguagem | Python | 3.10+ |
+
+---
+
+## 📚 Documentação
+
+| Documento | Descrição |
+|-----------|-----------|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitetura Azure ML e decisões de design |
+| [DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md) | Dicionário completo dos datasets |
+| [MODELS.md](docs/MODELS.md) | Documentação técnica dos modelos |
+| [PIPELINE.md](docs/PIPELINE.md) | Etapas do pipeline de ML |
+| [SETUP.md](docs/SETUP.md) | Guia detalhado de configuração do ambiente |
+| [CHANGELOG.md](docs/CHANGELOG.md) | Histórico de versões |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Como contribuir com o projeto |
+
+---
+
+## 🤝 Contribuição
+
+Contribuições são bem-vindas! Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para diretrizes de código, padrões de commit e como submeter pull requests.
+
+---
+
+## 📄 Licença
+
+Este projeto está licenciado sob a **MIT License** — veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+---
+
+## 👨‍💻 Autores
+
+**Wagner Costa Oliveira**
+- GitHub: [@wagnercoliveira](https://github.com/wagnercoliveira)
+- E-mail: wagner.costa.oliveira@gmail.com
+- Instituição: Universidade de Fortaleza — UNIFOR
+
+---
+
+## 🙏 Agradecimentos
+
+- **UCI Machine Learning Repository** pela disponibilização pública do dataset
+- **Professores da disciplina de Azure ML — UNIFOR** pela orientação acadêmica
+- **Microsoft Azure** pelo programa de créditos educacionais
+
+---
+
+*Última atualização: Maio 2026*

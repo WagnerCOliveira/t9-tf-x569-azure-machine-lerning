@@ -1,12 +1,30 @@
-pandas>=2.0.3
-numpy>=1.24.3
-scikit-learn>=1.3.0
-xgboost>=1.7.6
-lightgbm>=4.0.0
-optuna>=3.0.0
-shap>=0.44.0
-matplotlib>=3.7.2
-seaborn>=0.12.2
-joblib
-ipykernel
-nbformat
+# =============================================================================
+# Dependências para execução local (desenvolvimento e testes)
+# Ambiente: Python 3.10+ em qualquer sistema operacional
+# Instalar com: pip install -r requirements-local.txt
+# =============================================================================
+
+# --- Machine Learning ---
+scikit-learn>=1.3.0         # KNN Imputer, GridSearchCV, métricas, VotingClassifier
+xgboost>=1.7.6              # XGBoost Classifier
+lightgbm>=4.0.0             # LightGBM Classifier (leaf-wise boosting)
+optuna>=3.0.0               # Otimização bayesiana de hiperparâmetros (TPE)
+
+# --- Interpretabilidade ---
+shap>=0.44.0                # SHAP values para explicabilidade dos modelos
+
+# --- Processamento de Dados ---
+pandas>=2.0.3               # Manipulação de DataFrames
+numpy>=1.24.3               # Arrays numéricos e álgebra linear
+joblib                      # Serialização de modelos e paralelismo
+
+# --- Visualização ---
+matplotlib>=3.7.2           # Gráficos base
+seaborn>=0.12.2             # Visualizações estatísticas
+
+# --- Rastreamento (local, sem Azure) ---
+mlflow>=2.10.0              # Tracking local em ./mlruns (sem conexão Azure)
+
+# --- Jupyter ---
+ipykernel                   # Kernel Python para Jupyter Lab/Notebook
+nbformat                    # Leitura e escrita de arquivos .ipynb
