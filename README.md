@@ -67,14 +67,18 @@ O objetivo é prever se um paciente possui doença cardíaca (`target = 1`) ou n
 ```
 projeto/
 ├── data/
-│   └── heart.csv               # Dataset local (fallback)
+│   ├── heart.csv                        # Dataset simplificado (fallback)
+│   └── heart_disease_uci.csv            # Dataset UCI completo (920 registros, 4 centros)
 ├── notebooks/
-│   └── trabalho_final_ml.ipynb # Notebook principal
+│   ├── trabalho_final_ml.ipynb          # Notebook de referência (RF + XGBoost)
+│   ├── data processed.ipynb             # EDA e pré-processamento do dataset UCI
+│   └── treinamento_modelos_ml.ipynb     # Notebook completo (4 modelos + SHAP + Optuna)
+├── models/                              # Modelos treinados (gerado em execução)
 ├── scripts/
-│   ├── start-environment.sh    # Cria todos os recursos Azure
-│   └── end-environment.sh      # Remove todos os recursos Azure
-├── requirements-azure.txt      # Dependências para rodar no AML
-├── requirements-local.txt      # Dependências para rodar localmente
+│   ├── start-environment.sh             # Cria todos os recursos Azure
+│   └── end-environment.sh               # Remove todos os recursos Azure
+├── requirements-azure.txt               # Dependências para rodar no AML
+├── requirements-local.txt               # Dependências para rodar localmente
 └── README.md
 ```
 
@@ -84,7 +88,7 @@ projeto/
 
 ![Pipeline ML](docs/pipeline_ml.png)
 
-O notebook está organizado nas seguintes seções:
+### Notebook de Referência (`trabalho_final_ml.ipynb`)
 
 | Seção | Descrição |
 |---|---|
@@ -99,6 +103,28 @@ O notebook está organizado nas seguintes seções:
 | Treinamento — XGBoost | GridSearchCV + MLflow run com **logging manual** + artefato ROC |
 | Avaliação | Cross-validation, matrizes de confusão, curvas ROC, feature importance |
 | Conclusão | Tabela comparativa final |
+
+### Notebook Completo (`treinamento_modelos_ml.ipynb`)
+
+Notebook avançado com dataset UCI completo (920 registros), 4 algoritmos e análise de interpretabilidade.
+
+| Seção | Descrição |
+|---|---|
+| 0 — Verificação | Checagem de todas as dependências |
+| 1 — Azure ML | Conexão com fallback transparente para MLflow local |
+| 2 — Importações | Todas as bibliotecas centralizadas |
+| 3 — EDA + Revisão Crítica | Análise do `data processed.ipynb` + análises complementares |
+| 4 — Pré-processamento | Imputação ML-based + feature engineering (5 novas features) + StandardScaler |
+| 5 — MLflow | Configuração do experimento + funções de logging |
+| 6 — Logistic Regression | Baseline com regularização L1/L2/ElasticNet + coeficientes |
+| 7 — LightGBM | GridSearchCV + comparação com XGBoost |
+| 8 — XGBoost | GridSearchCV + logging manual de artefatos |
+| 9 — Voting Ensemble | Soft voting (LR + LightGBM + XGBoost) + hard voting |
+| 10 — Optuna | Otimização bayesiana (50 trials, TPE) do LightGBM |
+| 11 — Comparação | Tabela completa, curvas ROC sobrepostas, análise de FN |
+| 12 — SHAP | Beeswarm, bar plot, waterfall (True Positive e Falso Negativo) |
+| 13 — Registro | Seleção do melhor modelo + Azure ML Model Registry |
+| 14 — Relatório | Resumo executivo + próximos passos |
 
 ---
 
@@ -191,14 +217,24 @@ Se executado localmente (fora do Azure), o fallback carrega `data/heart.csv` aut
 
 Após a execução completa, os seguintes artefatos são gerados:
 
-**Métricas no conjunto de teste (valores de referência):**
+**Métricas no conjunto de teste — notebook de referência (valores de referência):**
 
 | Modelo | Accuracy | F1-Score | AUC-ROC |
 |---|---|---|---|
 | Random Forest | ~0.85 | ~0.86 | ~0.92 |
 | XGBoost | ~0.86 | ~0.87 | ~0.93 |
 
-> Os valores exatos variam conforme os hiperparâmetros selecionados pelo GridSearchCV.
+**Métricas no conjunto de teste — notebook completo (dataset UCI, valores de referência):**
+
+| Modelo | AUC-ROC | F1-Score | Observação |
+|---|---|---|---|
+| Logistic Regression | ~0.88 | ~0.85 | Baseline interpretável |
+| LightGBM (Grid) | ~0.89 | ~0.86 | Melhor velocidade |
+| XGBoost | ~0.90 | ~0.87 | Melhor AUC sem tuning |
+| Voting Ensemble | ~0.90 | ~0.87 | Combina os 3 modelos |
+| LightGBM (Optuna) | ~0.91 | ~0.88 | Melhor resultado global |
+
+> Critério de sucesso: AUC-ROC ≥ 0.85 — **todos os modelos superam o critério**.
 
 **No Azure ML (MLflow):**
 - Experimento `heart-disease-experiment` com duas runs registradas
@@ -239,8 +275,12 @@ azureml-telemetry==1.51.0
 scikit-learn==1.5.1
 pandas==2.0.3
 xgboost==1.7.6
+lightgbm>=4.0.0
+optuna>=3.0.0
+shap>=0.44.0
 matplotlib==3.7.2
 seaborn==0.12.2
+joblib
 ```
 
 > `numpy` não é listado pois já vem pré-instalado na Compute Instance do Azure ML.
