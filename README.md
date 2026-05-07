@@ -352,6 +352,16 @@ Este projeto está licenciado sob a **MIT License** — veja o arquivo [LICENSE]
 
 ## 👨‍💻 Autores
 
+**Emerson da Silva Maciel**
+- GitHub: [@Oemersonmaciel](https://github.com/Oemersonmaciel)
+- E-mail: emerson.maciel22@gmail.com
+- Instituição: Universidade de Fortaleza — UNIFOR
+
+**Rommel Assunção de Oliveira Sousa**
+- GitHub: [@JLR5420RS](https://github.com/JLR5420RS)
+- E-mail: rommel.mod@gmail.com
+- Instituição: Universidade de Fortaleza — UNIFOR
+
 **Wagner Costa Oliveira**
 - GitHub: [@wagnercoliveira](https://github.com/wagnercoliveira)
 - E-mail: wagner.costa.oliveira@gmail.com
@@ -362,7 +372,7 @@ Este projeto está licenciado sob a **MIT License** — veja o arquivo [LICENSE]
 ## 🙏 Agradecimentos
 
 - **UCI Machine Learning Repository** pela disponibilização pública do dataset
-- **Professores da disciplina de Azure ML — UNIFOR** pela orientação acadêmica
+- **Professor Marcondes Alexandre da disciplina de Azure ML — UNIFOR** pela orientação acadêmica
 - **Microsoft Azure** pelo programa de créditos educacionais
 
 ---
